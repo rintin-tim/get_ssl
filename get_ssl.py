@@ -178,7 +178,6 @@ timeout = 5
 error_message = []  # #TODO - still used? list of strings ?
 
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
-# TODO remove unused items
 
 opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
 
@@ -213,6 +212,8 @@ for opt, arg in opts:
         number = True
         countdown = True
         subject_name = True
+
+# TODO move this up/down?
 
 if unknown:
     error_01 = "Unknown arguments provided: {0}".format(unknown)
@@ -252,13 +253,13 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
                     _pem_cert = ssl.DER_cert_to_PEM_cert(ssock.getpeercert(True))  # use the socket to get the peer certificate
             return _pem_cert
         except socket.timeout:
-            error_04 = "*Timed out during certificate retrieval*"
-            error_message.append(error_04)
+            timeout_error = "Timed out during certificate retrieval. "
+            error_message.append(timeout_error)
             return None
         except ssl.CertificateError as cert_err:
             error_count += 1
-            error_12 = "SSL Certificate error: {0} ".format(cert_err)
-            error_message.append(error_12)
+            certificate_error = "SSL Certificate error: {0}. ".format(cert_err)
+            error_message.append(certificate_error)
             _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
             return _pem_cert
         except ssl.SSLError as ssl_err:
@@ -266,11 +267,13 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
             _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
             return _pem_cert
         except:
-            error_05 = "* Unable to connect to {0}. *".format(_hostname)
-            error_message.append(error_05)
+            connection_error = "Unable to connect to {0}. ".format(_hostname)
+            error_message.append(connection_error)
             return None
     else:
         return None
+
+#     TODO check error messages work
 
 
 # get PEM certificate
