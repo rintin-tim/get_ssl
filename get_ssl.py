@@ -20,10 +20,8 @@ class Certificate:
         self._x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
         self.expiry = self.get_expiry()
         self.issuer = self.get_issuer()
-        self.subject = None  # to add
         self.serial = self.get_serial()
         self.start = self.get_start()
-        self.url = None
         self.countdown = self.get_countdown()
         self.subject_org = self.get_organisation("subject")
 
