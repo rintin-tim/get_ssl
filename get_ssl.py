@@ -9,10 +9,8 @@ import getopt
 import socket
 from dateutil import relativedelta
 import re
-from urllib.request import urlopen
-from urllib.parse import urlparse
-import urllib.error
 import json
+
 
 class Certificate:
     """ creates a certificate object, providing formatted access to the main certificate properties """
@@ -98,8 +96,8 @@ class Certificate:
 
     def get_serial(self):
         serial_number = self.ssl_property_to_py("serial")
-        hex_number = format(serial_number, 'x')  # get_serial_number returns integer but hex format is more common to see on internet
-        return hex_number
+        # hex_number = format(serial_number, 'x')  # format serial as hexcode (optional)
+        return serial_number
 
     def get_start(self):
         py_date = self.ssl_property_to_py("start")
@@ -129,8 +127,6 @@ class Certificate:
     def get_countdown(self):
         """ return the time until the ssl expires"""
         expiry_time = self.ssl_property_to_py("expiry")
-        # expiry_time = datetime.now(timezone.utc)
-        # time.sleep(5)
         time_now = datetime.now(timezone.utc)
         remain = relativedelta.relativedelta(expiry_time, time_now)
         if remain.years == 0:
@@ -181,15 +177,13 @@ expiry = True
 start = False
 issuer = False
 issuer_short = False
-number = False  # TODO rename serial_number
+number = False
 countdown = False
 subject_name = False
 timeout = 5
 
-error_message = []  # list of strings ?
+error_message = []  # #TODO - still used? list of strings ?
 
-
-# TODO cutdown single letter flags!
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
 opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
@@ -225,8 +219,6 @@ for opt, arg in opts:
         number = True
         countdown = True
         subject_name = True
-        # timeout = 2  # because Heroku has a 30 second window  #TODO move all these into the ssl_checker
-
 
 if unknown:
     error_01 = "Unknown arguments provided: {0}".format(unknown)
@@ -240,7 +232,6 @@ def clean_url(address):
     domain = re.search(domain_pattern, address)  # return only the domain (in case the protocol is added)
     if domain:
         hostname = domain.group(0)  # strip out any protocol found (and maybe subdirectory)
-        # print("cleaning gives me this: {}".format(hostname))
     else:
         hostname = address  # if not matched by RegEx, still pass through, just in case it's valid
     return hostname
@@ -249,7 +240,7 @@ def clean_url(address):
 hostname = clean_url(address)
 
 
-def get_pem_cert(hostname, port, timeout, sslv23=False, error_count=0):
+def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
 
     error_count = error_count
 
@@ -258,12 +249,12 @@ def get_pem_cert(hostname, port, timeout, sslv23=False, error_count=0):
             context = ssl.SSLContext(
                 ssl.PROTOCOL_SSLv23)  # SSLv23 deprecated in Python 3.6 but works see above. UPDATE: use this version to return expired SSLs
         else:
-            context = ssl.create_default_context()  # Python Mac OS issue. Install Certificates.command from Applications/Python 3.6 folder or use SSLv23. https://stackoverflow.com/questions/41691327/ssl-sslerror-ssl-certificate-verify-failed-certificate-verify-failed-ssl-c
+            context = ssl.create_default_context()  # Python Mac OS issue. Install Certificates.command from Applications/Python 3.6 folder or use SSLv23. https://stackoverflow.com/questions/41691327/ssl-sslerror-ssl-certificate-verify-failed-certificate-verify-failed-ssl-c  #TODO add this to the readme?
         try:
-            with socket.create_connection((hostname, port), timeout=timeout) as sock:  # create a socket (port and url)
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:  # add a context to the socket (handshake information)
-                    pem_cert = ssl.DER_cert_to_PEM_cert(ssock.getpeercert(True))  # use the socket to get the peer certificate
-            return pem_cert
+            with socket.create_connection((_hostname, _port), timeout=_timeout) as sock:  # create a socket (port and url)
+                with context.wrap_socket(sock, server_hostname=_hostname) as ssock:  # add a context to the socket (handshake information)
+                    _pem_cert = ssl.DER_cert_to_PEM_cert(ssock.getpeercert(True))  # use the socket to get the peer certificate
+            return _pem_cert
         except socket.timeout:
             error_04 = "*Timed out during original certificate retrieval*"
             error_message.append(error_04)
@@ -272,24 +263,21 @@ def get_pem_cert(hostname, port, timeout, sslv23=False, error_count=0):
             error_count += 1
             error_12 = "SSL Certificate error: {0} ".format(cert_err)
             error_message.append(error_12)
-            pem_cert = get_pem_cert(hostname, port, timeout, sslv23=True, error_count=error_count)
-            return pem_cert
+            _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
+            return _pem_cert
         except ssl.SSLError as ssl_err:
             error_count += 1
-            # error_13 = "Warning: SSL error: {0} ".format(ssl_err)
-            # error_message.append(error_13)
-            pem_cert = get_pem_cert(hostname, port, timeout, sslv23=True, error_count=error_count)
-            return pem_cert
+            _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
+            return _pem_cert
         except:
-            # raise
-            error_05 = "* Unable to connect to {0}. *".format(hostname)
+            error_05 = "* Unable to connect to {0}. *".format(_hostname)
             error_message.append(error_05)
             return None
     else:
-        # error_14 = "* Too many errors encountered - stopped. *".format(hostname)
-        # error_message.append(error_14)
         return None
 
+
+# get PEM certificate
 pem_cert = get_pem_cert(hostname, port, timeout)
 
 if not pem_cert:
@@ -322,9 +310,5 @@ if error_message:
     error_message.reverse()  # print the last error first
     result_log["error"] = ", ".join(error_message)  # get a single string of errors
 
-# if "error" in result_log:
-#     print(result_log)  # return the result object (consisting of only error messages)
-#     # exit(1)
-#
 
 print(json.dumps(result_log))
