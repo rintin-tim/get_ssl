@@ -85,7 +85,7 @@ class Certificate:
 
         # Return a string with the issuer details.
         kv_separator = ": "  # char(s) used to separate the key from the value in the output . e.g. ':', '=', '>'
-        if issuer_short:  # TODO make issuer short > issuer CN and issuer long > issuer full
+        if issuer_cn:
             issuer_string = ", ".join([value for key, value in reversed(components) if key == "CN"])  # reverse list and return only the common name
         else:
             issuer_string = ", ".join([issuer_property[key] + kv_separator + value for key, value in reversed(components)])
@@ -169,7 +169,7 @@ local = False
 expiry = True
 start = False
 issuer = False
-issuer_short = False
+issuer_cn = False
 number = False
 countdown = False
 subject_name = False
@@ -179,7 +179,7 @@ error_message = []  # #TODO - still used? list of strings ?
 
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
-opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
+opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuercn", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
 
 for opt, arg in opts:
     if opt == ("-p" or "--port"):
@@ -194,8 +194,8 @@ for opt, arg in opts:
         start = True
     elif opt == ("-i" or "--issuer"):
         issuer = True
-    elif opt == ("-t" or "--issuershort"):
-        issuer_short = True
+    elif opt == ("-t" or "--issuercn"):
+        issuer_cn = True
     elif opt == ("-n" or "--number"):
         number = True
     elif opt == ("-c" or "--countdown"):
@@ -208,7 +208,7 @@ for opt, arg in opts:
         local = True
         expiry = True
         start = True
-        issuer_short = True
+        issuer_cn = True
         number = True
         countdown = True
         subject_name = True
@@ -216,8 +216,8 @@ for opt, arg in opts:
 # TODO move this up/down?
 
 if unknown:
-    error_01 = "Unknown arguments provided: {0}".format(unknown)
-    error_message.append(error_01)
+    unknown_error = "Unknown arguments provided: {0}".format(unknown)
+    error_message.append(unknown_error)
     # exit(1)  # TODO return exit code at bottom if messages are present
 
 
@@ -298,7 +298,7 @@ if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         result_log["expiry"] = certificate.expiry
     if start:
         result_log["start"] = certificate.start
-    if issuer or issuer_short:
+    if issuer or issuer_cn:
         result_log["issuer"] = certificate.issuer
     if number:
         result_log["number"] = certificate.serial
