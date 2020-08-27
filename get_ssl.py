@@ -89,8 +89,7 @@ class Certificate:
 
         # Return a string with the issuer details.
         kv_separator = ": "  # char(s) used to separate the key from the value in the output . e.g. ':', '=', '>'
-        if issuer_short:
-            # issuer_string = ", ".join([issuer_property[key] + kv_separator + value for key, value in reversed(components) if key == "CN" or key == "C"])  # reverse list and return only the country and common name
+        if issuer_short:  # TODO make issuer short > issuer CN and issuer long > issuer full
             issuer_string = ", ".join([value for key, value in reversed(components) if key == "CN"])  # reverse list and return only the common name
         else:
             issuer_string = ", ".join([issuer_property[key] + kv_separator + value for key, value in reversed(components)])
@@ -115,33 +114,11 @@ class Certificate:
         return py_date
 
     @staticmethod
-    def format_gmt_offset(off_amount):
-        """ takes the requested offset number and returns the offset number required for Etc/GMT as a string
-        note the number required for Etc/GMT offset is the *inverse* of normal offsets due to a POSIX bug
-        """
-        if offset:
-            offset_int = int(off_amount)
-            if offset_int in range(0, -14):
-                offset_string = "+{0}".format(offset_int)
-            elif offset_int in range(1, 14):
-                offset_string = "-{0}".format(offset_int)  # change positive offsets to negative and vice versa - POSIX bug(!)
-            else:
-                print("offset value of '{0}' is not in expected range".format(off_amount))
-                exit(1)
-            return offset_string
-
-        else:
-            return offset  # return the existing None value
-
-    def format_date(self, python_date):
-        """ format the python date for readability. return a timestamp by default.
-        if offset and local provided, offset will be returned """
+    def format_date(python_date):
+        """ format the python date for readability. return a timestamp by default."""
         date = python_date
-        if local and not offset:
+        if local:
             date = python_date.astimezone(pytz.timezone("Europe/London"))
-        if offset:
-            offset_string = self.format_gmt_offset(offset)
-            date = python_date.astimezone(pytz.timezone("Etc/GMT{0}".format(offset_string)))
         if readable:
             human_format = "%c"  # Locale’s appropriate date and time representation: Tue Aug 16 21:30:00 1988 (en_US);
             date = date.strftime(human_format)
@@ -204,11 +181,8 @@ expiry = True
 start = False
 issuer = False
 issuer_short = False
-number = False
+number = False  # TODO rename serial_number
 countdown = False
-countdown_short = False
-# verbose = False
-offset = None
 subject_name = False
 forgiving = False
 timeout = 5
@@ -220,7 +194,7 @@ error_message = []  # list of strings ?
 # TODO cutdown single letter flags!
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
-opts, unknown = getopt.getopt(options, "p:ferlsitncuo:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "offset=", "forgiving", "timeout=", "all"])  # looks for -p or --port in provided arguments
+opts, unknown = getopt.getopt(options, "p:ferlsitncuo:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "forgiving", "timeout=", "all"])  # looks for -p or --port in provided arguments
 
 for opt, arg in opts:
     if opt == ("-p" or "--port"):
@@ -241,10 +215,6 @@ for opt, arg in opts:
         number = True
     elif opt == ("-c" or "--countdown"):
         countdown = True
-    elif opt == ("-u" or "--countdownshort"):
-        countdown_short = True
-    elif opt == ("-o" or "--offset"):
-        offset = arg
     elif opt == ("-f" or "--for"):
         subject_name = True
     elif opt == "--forgiving":
@@ -257,7 +227,7 @@ for opt, arg in opts:
         start = True
         issuer_short = True
         number = True
-        countdown_short = True
+        countdown = True
         subject_name = True
         # forgiving = True
         # timeout = 2  # because Heroku has a 30 second window  #TODO move all these into the ssl_checker
@@ -391,7 +361,7 @@ if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         result_log["issuer"] = certificate.issuer
     if number:
         result_log["number"] = certificate.serial
-    if countdown or countdown_short:
+    if countdown:
         result_log["countdown"] = certificate.countdown
 
 if error_message:
