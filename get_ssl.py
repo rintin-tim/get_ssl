@@ -290,12 +290,6 @@ def get_pem_cert(hostname, port, timeout, sslv23=False, error_count=0):
         # error_message.append(error_14)
         return None
 
-
-f = open("timeout.txt", "a")
-f.write("time out is {0}. \n".format(timeout,))
-
-f.close()
-
 pem_cert = get_pem_cert(hostname, port, timeout)
 
 if not pem_cert:
