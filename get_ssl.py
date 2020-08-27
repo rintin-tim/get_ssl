@@ -23,7 +23,7 @@ class Certificate:
         self.serial = self.get_serial()
         self.start = self.get_start()
         self.countdown = self.get_countdown()
-        self.subject_org = self.get_organisation("subject")
+        self.subject_org = self.get_organisation_subject()
 
     def get_expiry(self):
         """ formats the expiration datetime object """
@@ -143,16 +143,11 @@ class Certificate:
             countdown_string = "{0}, {1}, {2}".format(rem_mth, rem_wks, rem_days)
         return countdown_string
 
-    def get_organisation(self, org_type):
-        """
-        args:
-        - org type:
-            - subject (string) - return the organisation name for the certificate subject
-            - issuer (string) - return the organisation name for the certificate issuer
+    def get_organisation_subject(self):
+        """ returns organisation name for subject. if not found, returns common name.
+        if still not found returns 'NA' as a string """
 
-        returns organisation name for subject or issuer. if not found, returns common name. if still not found returns 'NA' as a string """
-
-        org_components = self.ssl_property_to_py("{0}".format(org_type))
+        org_components = self.ssl_property_to_py("subject")
 
         for k, v in org_components:
             if k == "O":
@@ -183,6 +178,7 @@ timeout = 5
 error_message = []  # #TODO - still used? list of strings ?
 
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
+# TODO remove unused items
 
 opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
 
@@ -227,12 +223,12 @@ if unknown:
 def clean_url(address):
     """ remove the protocol and subdirectorires for uniformity """
     domain_pattern = r"(?i)\b([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}\b"
-    domain = re.search(domain_pattern, address)  # return only the domain (in case the protocol is added)
+    domain = re.search(domain_pattern, address)  # return only the domain in instances where the protocol was included
     if domain:
-        hostname = domain.group(0)  # strip out any protocol found (and maybe subdirectory)
+        clean_hostname = domain.group(0)  # strip out any protocol found (and maybe subdirectory)
     else:
-        hostname = address  # if not matched by RegEx, still pass through, just in case it's valid
-    return hostname
+        clean_hostname = address  # if not matched by RegEx, still pass through, just in case it's valid
+    return clean_hostname
 
 
 hostname = clean_url(address)
@@ -291,7 +287,7 @@ result_log = {}
 if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
     certificate = Certificate(pem_cert)
 
-    organisation = certificate.get_organisation("subject")
+    organisation = certificate.get_organisation_subject()
 
     if subject_name:
         result_log["name"] = certificate.subject_org
