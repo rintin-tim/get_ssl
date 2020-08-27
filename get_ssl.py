@@ -241,6 +241,8 @@ hostname = clean_url(address)
 
 
 def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
+    """ retrieves SSL certificate. if an error is encountered this function will try again (depending on reason for failure).
+    Error messages are appended to the result. Function will try a maximum of three times. """
 
     error_count = error_count
 
@@ -256,7 +258,7 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
                     _pem_cert = ssl.DER_cert_to_PEM_cert(ssock.getpeercert(True))  # use the socket to get the peer certificate
             return _pem_cert
         except socket.timeout:
-            error_04 = "*Timed out during original certificate retrieval*"
+            error_04 = "*Timed out during certificate retrieval*"
             error_message.append(error_04)
             return None
         except ssl.CertificateError as cert_err:
