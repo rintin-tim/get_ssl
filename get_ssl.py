@@ -28,7 +28,7 @@ class Certificate:
         self.subject_org = self.get_organisation("subject")
 
     def get_expiry(self):
-        """ formats the expiry expiry datetime object """
+        """ formats the expiration datetime object """
         py_date = self.ssl_property_to_py("expiry")
         formatted_date = self.format_date(py_date)
         return formatted_date
