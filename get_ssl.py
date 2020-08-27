@@ -184,9 +184,7 @@ issuer_short = False
 number = False  # TODO rename serial_number
 countdown = False
 subject_name = False
-# forgiving = False
 timeout = 5
-# forgiving_error = False
 
 error_message = []  # list of strings ?
 
@@ -194,7 +192,7 @@ error_message = []  # list of strings ?
 # TODO cutdown single letter flags!
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
-opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "forgiving", "timeout=", "all"])  # looks for -p or --port in provided arguments  #TODO remove forgiving
+opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuershort", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
 
 for opt, arg in opts:
     if opt == ("-p" or "--port"):
@@ -217,8 +215,6 @@ for opt, arg in opts:
         countdown = True
     elif opt == ("-f" or "--for"):
         subject_name = True
-    # elif opt == "--forgiving":
-    #     forgiving = True
     elif opt == "--timeout":
         timeout = int(arg)
     elif opt == "-a" or opt == "--all":
@@ -229,7 +225,6 @@ for opt, arg in opts:
         number = True
         countdown = True
         subject_name = True
-        # forgiving = True
         # timeout = 2  # because Heroku has a 30 second window  #TODO move all these into the ssl_checker
 
 
@@ -278,16 +273,12 @@ def get_pem_cert(hostname, port, timeout, sslv23=False, error_count=0):
             error_12 = "SSL Certificate error: {0} ".format(cert_err)
             error_message.append(error_12)
             pem_cert = get_pem_cert(hostname, port, timeout, sslv23=True, error_count=error_count)
-            # if forgive_flow:
-            #     forgiving_error = True
             return pem_cert
         except ssl.SSLError as ssl_err:
             error_count += 1
             # error_13 = "Warning: SSL error: {0} ".format(ssl_err)
             # error_message.append(error_13)
             pem_cert = get_pem_cert(hostname, port, timeout, sslv23=True, error_count=error_count)
-            # if forgive_flow:
-            #     forgiving_error = True
             return pem_cert
         except:
             # raise
@@ -306,38 +297,6 @@ f.write("time out is {0}. \n".format(timeout,))
 f.close()
 
 pem_cert = get_pem_cert(hostname, port, timeout)
-
-# if not pem_cert and forgiving:
-# if not pem_cert:
-#     try:
-#         urllib_response = urlopen("http://" + hostname, timeout=timeout)
-#         final_url = urllib_response.url
-#         parsed_url = urlparse(final_url)
-#         if not clean_url(parsed_url.hostname) == hostname:  # if the final url is different to the original, there must be a redirect
-#             redirect_hostname = urlparse(final_url).hostname
-#             pem_cert = get_pem_cert(redirect_hostname, port, timeout=timeout, forgive_flow=True)
-#             if pem_cert and not forgiving_error:
-#                 error_06 = "SOFT PASS: Domain has no valid SSL but a valid SSL was found on the redirected domain: {0}".format(redirect_hostname)
-#                 error_message.append(error_06)
-#             elif pem_cert and forgiving_error:
-#                 error_16 = "SSL error on redirected domain: {0}".format(redirect_hostname)
-#                 error_message.append(error_16)
-#             else:
-#                 error_07 = "Redirect: No ssl found on redirected domain {0}"
-#                 error_message.append(error_07)
-#
-#         else:
-#             "Redirect: No redirect to check"
-#     except socket.timeout:
-#         error_03 = "*Redirect: Timed out during redirect*"
-#         error_message.append(error_03)
-#     except urllib.error.URLError:
-#         pass
-#     except ssl.CertificateError as err:
-#         error_10 = "*Redirect: SSL Certificate error: {0}*".format(err)
-#         error_message.append(error_10)
-#     except:
-#         pass
 
 if not pem_cert:
     error_02 = "Could not connect to host: {0} on port: {1}.".format(hostname, port)
