@@ -314,7 +314,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.local not in pytz.all_timezones:
-        print("--local: {} is not a valid timezone (tz)".format(args.local))
+        print("--local: {} is not a valid timezone (pytz)".format(args.local))
         exit(1)
 
     # return all ssl certificate attributes
