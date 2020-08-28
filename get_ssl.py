@@ -10,13 +10,18 @@ import socket
 from dateutil import relativedelta
 import re
 import json
+import argparse
+
+
+error_message = []
 
 
 class Certificate:
     """ creates a certificate object, providing formatted access to the main certificate properties """
 
-    def __init__(self, cert):
+    def __init__(self, cert, arguments):
 
+        self.arguments = arguments
         self._x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
         self.expiry = self.get_expiry()
         self.issuer = self.get_issuer()
@@ -85,7 +90,7 @@ class Certificate:
 
         # Return a string with the issuer details.
         kv_separator = ": "  # char(s) used to separate the key from the value in the output . e.g. ':', '=', '>'
-        if issuer_cn:
+        if self.arguments.issuer_cn:
             issuer_string = ", ".join([value for key, value in reversed(components) if key == "CN"])  # reverse list and return only the common name
         else:
             issuer_string = ", ".join([issuer_property[key] + kv_separator + value for key, value in reversed(components)])
@@ -160,67 +165,6 @@ class Certificate:
                 return "NA"  # implement url
 
 
-address = sys.argv[1]  # first parameter after script name
-options = sys.argv[2:]  # optional arguments passed into the script (all args after the address parameter)
-
-port = 443
-readable = False
-local = False
-expiry = True
-start = False
-issuer = False
-issuer_cn = False
-number = False
-countdown = False
-subject_name = False
-timeout = 5
-
-error_message = []
-
-# TODO correct or remove the OR in the below - both clauses need to as per "--all"
-
-opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuercn", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
-
-for opt, arg in opts:
-    if opt == ("-p" or "--port"):
-        port = int(arg)  # set port from provided arguments
-    elif opt == ("-e" or "--expiry"):
-        expiry = True
-    elif opt == ("-r" or "--ts_to_readable"):
-        readable = True
-    elif opt == ("-l" or "--local"):
-        local = True
-    elif opt == ("-s" or "--start"):
-        start = True
-    elif opt == ("-i" or "--issuer"):
-        issuer = True
-    elif opt == ("-t" or "--issuercn"):
-        issuer_cn = True
-    elif opt == ("-n" or "--number"):
-        number = True
-    elif opt == ("-c" or "--countdown"):
-        countdown = True
-    elif opt == ("-f" or "--for"):
-        subject_name = True
-    elif opt == "--timeout":
-        timeout = int(arg)
-    elif opt == "-a" or opt == "--all":
-        local = True
-        expiry = True
-        start = True
-        issuer_cn = True
-        number = True
-        countdown = True
-        subject_name = True
-
-# TODO move this up/down?
-
-if unknown:
-    unknown_error = "Unknown arguments provided: {0}".format(unknown)
-    error_message.append(unknown_error)
-    # exit(1)  # TODO return exit code at bottom if messages are present
-
-
 def clean_url(address):
     """ remove the protocol and subdirectorires for uniformity """
     domain_pattern = r"(?i)\b([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}\b"
@@ -230,9 +174,6 @@ def clean_url(address):
     else:
         clean_hostname = address  # if not matched by RegEx, still pass through, just in case it's valid
     return clean_hostname
-
-
-hostname = clean_url(address)
 
 
 def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
@@ -283,39 +224,179 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
         return None
 
 
-# get PEM certificate
-pem_cert = get_pem_cert(hostname, port, timeout)
+def main(address=None, port=None, readable=None, local=None, expiry=None, start=None, issuer=None, issuer_cn=None, number=None,
+         countdown=None, subject_name=None, timeout=None, allitems=None, arguments=None):
 
-if not pem_cert:
-    connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(hostname, port)
-    error_message.append(connection_error)
+    # address = sys.argv[1]  # first parameter after script name
+    # options = sys.argv[2:]  # optional arguments passed into the script (all args after the address parameter)
+
+# """ port = 443
+#     readable = False
+#     local = False
+#     expiry = True
+#     start = False
+#     issuer = False
+#     issuer_cn = False
+#     number = False
+#     countdown = False
+#     subject_name = False
+#     timeout = 5
+# """
+
+    error_message = []
+
+    # TODO correct or remove the OR in the below - both clauses need to as per "--all"
+
+    # opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuercn", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
+    #
+    # for opt, arg in opts:
+    #     if opt == ("-p" or "--port"):
+    #         port = int(arg)  # set port from provided arguments
+    #     elif opt == ("-e" or "--expiry"):
+    #         expiry = True
+    #     elif opt == ("-r" or "--ts_to_readable"):
+    #         readable = True
+    #     elif opt == ("-l" or "--local"):
+    #         local = True
+    #     elif opt == ("-s" or "--start"):
+    #         start = True
+    #     elif opt == ("-i" or "--issuer"):
+    #         issuer = True
+    #     elif opt == ("-t" or "--issuercn"):
+    #         issuer_cn = True
+    #     elif opt == ("-n" or "--number"):
+    #         number = True
+    #     elif opt == ("-c" or "--countdown"):
+    #         countdown = True
+    #     elif opt == ("-f" or "--for"):
+    #         subject_name = True
+    #     elif opt == "--timeout":
+    #         timeout = int(arg)
+    #     elif opt == "-a" or opt == "--all":
+    #         local = True
+    #         expiry = True
+    #         start = True
+    #         issuer_cn = True
+    #         number = True
+    #         countdown = True
+    #         subject_name = True
+    #
+    # # TODO move this up/down?
+    #
+    # if unknown:
+    #     unknown_error = "Unknown arguments provided: {0}".format(unknown)
+    #     error_message.append(unknown_error)
+    #     # exit(1)  # TODO return exit code at bottom if messages are present
+
+    if allitems:
+        local = True
+        expiry = True
+        start = True
+        issuer_cn = True
+        number = True
+        countdown = True
+        subject_name = True
+
+    hostname = clean_url(address)
+
+    # get PEM certificate
+    print(port)
+    pem_cert = get_pem_cert(arguments.hostname, arguments.port, arguments.timeout)
+
+    if not pem_cert:
+        connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(arguments.hostname, arguments.port)
+        error_message.append(connection_error)
 
 
-# create result log
-result_log = {}
+    # create result log
+    result_log = {}
 
-if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
-    certificate = Certificate(pem_cert)
+    if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
+        certificate = Certificate(pem_cert, arguments)
 
-    organisation = certificate.get_organisation_subject()
+        organisation = certificate.get_organisation_subject()
 
-    if subject_name:
-        result_log["name"] = certificate.subject_org
-    if expiry:
-        result_log["expiry"] = certificate.expiry
-    if start:
-        result_log["start"] = certificate.start
-    if issuer or issuer_cn:
-        result_log["issuer"] = certificate.issuer
-    if number:
-        result_log["number"] = certificate.serial
-    if countdown:
-        result_log["countdown"] = certificate.countdown
+        if subject_name:
+            result_log["name"] = certificate.subject_org
+        if expiry:
+            result_log["expiry"] = certificate.expiry
+        if start:
+            result_log["start"] = certificate.start
+        if issuer or issuer_cn:
+            result_log["issuer"] = certificate.issuer
+        if number:
+            result_log["number"] = certificate.serial
+        if countdown:
+            result_log["countdown"] = certificate.countdown
 
-if error_message:
-    error_message.reverse()  # print the last error first
-    # result_log["error"] = ", ".join(error_message)  # get a single string of errors
-    result_log["error"] = error_message  # get a single string of errors
+    if error_message:
+        error_message.reverse()  # print the last error first
+        # result_log["error"] = ", ".join(error_message)  # get a single string of errors
+        result_log["error"] = error_message  # get a single string of errors
 
 
-print(json.dumps(result_log))
+    print(json.dumps(result_log))
+
+    # TODO implement argparse
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("address", help="The web address to be used")
+    parser.add_argument("-p", "--port", help="Set the port to use - usually 443", default=443)
+    parser.add_argument("-e", "--expiry", help="include the ssl expiration date in the output", default=True)
+    parser.add_argument("-r", "--readable", help="use a readable date format for the ssl expiration date", nargs='?')
+    parser.add_argument("-l", "--local", help="use local (Europe/London) time for readable date format (not UTC)", nargs='?')
+    parser.add_argument("-s", "--start", action="store_true", help="include the ssl start date in the format")  # TODO action="store_true" ? default value?
+    parser.add_argument("-i", "--issuer", help="include the ssl issuer by their full name", nargs='?')  # TODO expand on included
+    parser.add_argument("-t", "--issuercn", help="include the ssl issuer. Only the issuer's Common Name will be displayed", nargs='?')
+    parser.add_argument("-n", "--number", help="include the ssl serial number in the output", nargs='?')
+    parser.add_argument("-c", "--countdown", help="include the remaining years/months/weeks/days until ssl expires", nargs='?')
+    parser.add_argument("-f", "--subject", help="include the ssl subject (organisation) in the output", nargs='?')
+    parser.add_argument("--timeout", help="set the timeout", nargs='?')
+    parser.add_argument("-a", "--allitems", help="include all ssl attributes", nargs='?')
+
+    args = parser.parse_args()
+
+    # main(args.client, browser=args.browser, screen_width=args.width, screen_height=args.height, directory=args.directory,
+    #      suppress_mail=args.suppress)
+
+    main(address=args.address, port=args.port, expiry=args.expiry, readable=args.readable, local=args.local, start=args.start, issuer=args.issuer,
+         issuer_cn=args.issuercn, number=args.number, countdown=args.countdown, subject_name=args.subject, timeout=args.timeout,
+         allitems=args.allitems, arguments=args)
+
+
+    # for opt, arg in opts:
+    #     if opt == ("-p" or "--port"):
+    #         port = int(arg)  # set port from provided arguments
+    #     elif opt == ("-e" or "--expiry"):
+    #         expiry = True
+    #     elif opt == ("-r" or "--readable"):
+    #         readable = True
+    #     elif opt == ("-l" or "--local"):
+    #         local = True
+    #     elif opt == ("-s" or "--start"):
+    #         start = True
+    #     elif opt == ("-i" or "--issuer"):
+    #         issuer = True
+    #     elif opt == ("-t" or "--issuercn"):
+    #         issuer_cn = True
+    #     elif opt == ("-n" or "--number"):
+    #         number = True
+    #     elif opt == ("-c" or "--countdown"):
+    #         countdown = True
+    #     elif opt == ("-f" or "--for"):
+    #         subject_name = True
+    #     elif opt == "--timeout":
+    #         timeout = int(arg)
+    #     elif opt == "-a" or opt == "--all":
+    #         local = True
+    #         expiry = True
+    #         start = True
+    #         issuer_cn = True
+    #         number = True
+    #         countdown = True
+    #         subject_name = True
+    #
+    #
