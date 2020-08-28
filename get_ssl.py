@@ -175,7 +175,7 @@ countdown = False
 subject_name = False
 timeout = 5
 
-error_message = []  # #TODO - still used? list of strings ?
+error_message = []
 
 # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
@@ -236,15 +236,19 @@ hostname = clean_url(address)
 
 
 def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
-    """ retrieves SSL certificate. if an error is encountered this function will try again (depending on reason for failure).
-    Error messages are appended to the result. Function will try a maximum of three times. """
+    """ retrieves SSL certificate. if an invalid certificate error is encountered
+     1. the message is logged.
+     2. the function will try again with sslv23=True (depending on reason for failure) to try and retrieve the data anyway.
+     (sslv23 is needed to return ssl information on invalid certificates)
+
+    The function will try a maximum of three times. """
 
     error_count = error_count
 
     if error_count < 2:
         if sslv23:
             context = ssl.SSLContext(
-                ssl.PROTOCOL_SSLv23)  # SSLv23 deprecated in Python 3.6 but works see above. UPDATE: use this version to return expired SSLs
+                ssl.PROTOCOL_SSLv23)  # SSLv23 deprecated in Python 3.6 but works see above. This version is used to return expired SSLs
         else:
             context = ssl.create_default_context()  # Python Mac OS issue. Install Certificates.command from Applications/Python 3.6 folder or use SSLv23. https://stackoverflow.com/questions/41691327/ssl-sslerror-ssl-certificate-verify-failed-certificate-verify-failed-ssl-c  #TODO add this to the readme?
         try:
@@ -257,13 +261,17 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
             error_message.append(timeout_error)
             return None
         except ssl.CertificateError as cert_err:
+            print("cert error")
             error_count += 1
-            certificate_error = "SSL Certificate error: {0}. ".format(cert_err)
+            certificate_error = "CertificateError: {0}. ".format(cert_err)
             error_message.append(certificate_error)
             _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
             return _pem_cert
         except ssl.SSLError as ssl_err:
+            print("ssl error")
             error_count += 1
+            ssl_error = "SSLError: {0}. ".format(ssl_err)
+            error_message.append(ssl_error)
             _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
             return _pem_cert
         except:
@@ -271,17 +279,16 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
             error_message.append(connection_error)
             return None
     else:
+        # Maximum error count exceeded
         return None
-
-#     TODO check error messages work
 
 
 # get PEM certificate
 pem_cert = get_pem_cert(hostname, port, timeout)
 
 if not pem_cert:
-    error_02 = "Could not connect to host: {0} on port: {1}.".format(hostname, port)
-    error_message.append(error_02)
+    connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(hostname, port)
+    error_message.append(connection_error)
 
 
 # create result log
@@ -307,7 +314,8 @@ if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
 
 if error_message:
     error_message.reverse()  # print the last error first
-    result_log["error"] = ", ".join(error_message)  # get a single string of errors
+    # result_log["error"] = ", ".join(error_message)  # get a single string of errors
+    result_log["error"] = error_message  # get a single string of errors
 
 
 print(json.dumps(result_log))
