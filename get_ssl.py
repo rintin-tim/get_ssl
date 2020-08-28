@@ -23,16 +23,41 @@ class Certificate:
 
         self.arguments = arguments
         self._x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
-        self.expiry = self.get_expiry()
+        self.expiry = self.get_timestamp("expiry")
+        self.readable_expiry = self.get_readable("expiry")
         self.issuer = self.get_issuer()
+        self.issuercn = self.get_issuer("cn")
         self.serial = self.get_serial()
-        self.start = self.get_start()
+        self.start = self.get_timestamp("start")
+        self.readable_start = self.get_readable("start")
         self.countdown = self.get_countdown()
         self.subject_org = self.get_organisation_subject()
 
     def get_expiry(self):
-        """ formats the expiration datetime object """
-        py_date = self.ssl_property_to_py("expiry")
+        """ returns expiration date as timestamp """
+        py_timestamp = self.ssl_property_to_py("expiry").timestamp()
+        # formatted_date = self.format_date(py_date)
+        # return formatted_date
+        return py_timestamp
+
+    def get_timestamp(self, start_expiry):
+        if start_expiry == "start":
+            py_date = self.ssl_property_to_py("start")
+        else:
+            py_date = self.ssl_property_to_py("expiry")
+        return py_date.timestamp()
+
+    def get_start(self):
+        py_date = self.ssl_property_to_py("start")
+        formatted_date = self.format_date(py_date)
+        return formatted_date
+
+    def get_readable(self, start_expiry):
+        """returns the ssl dates (start and readable_expiry) in a readable date format."""
+        if start_expiry == "start":
+            py_date = self.ssl_property_to_py("start")
+        else:
+            py_date = self.ssl_property_to_py("expiry")
         formatted_date = self.format_date(py_date)
         return formatted_date
 
@@ -61,14 +86,20 @@ class Certificate:
         else:
             raise Exception("x509 property not recognised: {0}".format(x509_property))
 
-    def get_issuer(self):
+    def get_issuer(self, common_name=None):
         """ returns formatted string """
         issuer_tuple = self.ssl_property_to_py("issuer")
-        formatted_issuer = self.format_issuer(issuer_tuple)
+        formatted_issuer = self.format_issuer(issuer_tuple, common_name)
         return formatted_issuer
 
-    @staticmethod
-    def format_issuer(components):
+    # def get_issuer(self):
+    #     """ returns formatted string """
+    #     issuer_tuple = self.ssl_property_to_py("issuer")
+    #     formatted_issuer = self.format_issuer(issuer_tuple)
+    #     return formatted_issuer
+
+    # @staticmethod
+    def format_issuer(self, components, common_name=None):
         """ formats the decoded component tuple. Creates a single string with each tuple pair ', ' separated.
         Converts issuer codes to full names e.g 'C' to 'Country'. Inserts a character between each key and value
         such as '=' or ':' to aid string readability. Has the option to return a dictionary rather than a
@@ -90,7 +121,7 @@ class Certificate:
 
         # Return a string with the issuer details.
         kv_separator = ": "  # char(s) used to separate the key from the value in the output . e.g. ':', '=', '>'
-        if self.arguments.issuer_cn:
+        if common_name:
             issuer_string = ", ".join([value for key, value in reversed(components) if key == "CN"])  # reverse list and return only the common name
         else:
             issuer_string = ", ".join([issuer_property[key] + kv_separator + value for key, value in reversed(components)])
@@ -102,11 +133,6 @@ class Certificate:
         # hex_number = format(serial_number, 'x')  # format serial as hexcode (optional)
         return serial_number
 
-    def get_start(self):
-        py_date = self.ssl_property_to_py("start")
-        formatted_date = self.format_date(py_date)
-        return formatted_date
-
     @staticmethod
     def convert_x509_to_dt(x509_date):
         """ converts the x509 date format to a python datetime object """
@@ -114,17 +140,17 @@ class Certificate:
         py_date = datetime.strptime(utc_date, "%Y%m%d%H%M%S%z")
         return py_date
 
-    @staticmethod
-    def format_date(python_date):
-        """ format the python date for readability. return a timestamp by default."""
+    # @staticmethod
+    def format_date(self, python_date):
+        """ make the python date readable. optionally change to local timezone."""
         date = python_date
-        if local:
+
+        if self.arguments.local:
             date = python_date.astimezone(pytz.timezone("Europe/London"))
-        if readable:
-            human_format = "%c"  # Locale’s appropriate date and time representation: Tue Aug 16 21:30:00 1988 (en_US);
-            date = date.strftime(human_format)
-        else:
-            date = date.timestamp()
+
+        human_format = "%c"  # Locale’s appropriate date and time representation: Tue Aug 16 21:30:00 1988 (en_US);
+        date = date.strftime(human_format)
+
         return date
 
     def get_countdown(self):
@@ -184,9 +210,9 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
 
     The function will try a maximum of three times. """
 
-    error_count = error_count
+    # error_count = error_count
 
-    if error_count < 2:
+    if error_count < 3:
         if sslv23:
             context = ssl.SSLContext(
                 ssl.PROTOCOL_SSLv23)  # SSLv23 deprecated in Python 3.6 but works see above. This version is used to return expired SSLs
@@ -202,7 +228,7 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
             error_message.append(timeout_error)
             return None
         except ssl.CertificateError as cert_err:
-            print("cert error")
+            print("cert_err")
             error_count += 1
             certificate_error = "CertificateError: {0}. ".format(cert_err)
             error_message.append(certificate_error)
@@ -224,9 +250,10 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
         return None
 
 
-def main(address=None, port=None, readable=None, local=None, expiry=None, start=None, issuer=None, issuer_cn=None, number=None,
-         countdown=None, subject_name=None, timeout=None, allitems=None, arguments=None):
-
+# def main(address=None, port=None, readable=None, local=None, expiry=None, start=None, issuer=None, issuer_cn=None, number=None,
+#          countdown=None, subject_name=None, timeout=None, allitems=None, arguments=None):
+def main(arguments=None):
+    print(arguments)
     # address = sys.argv[1]  # first parameter after script name
     # options = sys.argv[2:]  # optional arguments passed into the script (all args after the address parameter)
 
@@ -243,7 +270,7 @@ def main(address=None, port=None, readable=None, local=None, expiry=None, start=
 #     timeout = 5
 # """
 
-    error_message = []
+    # error_message = []
 
     # TODO correct or remove the OR in the below - both clauses need to as per "--all"
 
@@ -288,7 +315,7 @@ def main(address=None, port=None, readable=None, local=None, expiry=None, start=
     #     error_message.append(unknown_error)
     #     # exit(1)  # TODO return exit code at bottom if messages are present
 
-    if allitems:
+    if arguments.allitems:
         local = True
         expiry = True
         start = True
@@ -297,14 +324,14 @@ def main(address=None, port=None, readable=None, local=None, expiry=None, start=
         countdown = True
         subject_name = True
 
-    hostname = clean_url(address)
+    hostname = clean_url(arguments.address)
 
     # get PEM certificate
-    print(port)
-    pem_cert = get_pem_cert(arguments.hostname, arguments.port, arguments.timeout)
+    print(arguments.port)
+    pem_cert = get_pem_cert(hostname, arguments.port, arguments.timeout)
 
     if not pem_cert:
-        connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(arguments.hostname, arguments.port)
+        connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(hostname, arguments.port)
         error_message.append(connection_error)
 
 
@@ -314,19 +341,41 @@ def main(address=None, port=None, readable=None, local=None, expiry=None, start=
     if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         certificate = Certificate(pem_cert, arguments)
 
-        organisation = certificate.get_organisation_subject()
+        # organisation = certificate.get_organisation_subject()
 
-        if subject_name:
-            result_log["name"] = certificate.subject_org
-        if expiry:
+        # todo correct these
+
+        # if subject_name:
+        #     result_log["name"] = certificate.subject_org
+        # if expiry:
+        #     result_log["expiry"] = certificate.expiry
+        # if start:
+        #     result_log["start"] = certificate.start
+        # if issuer or issuer_cn:
+        #     result_log["issuer"] = certificate.issuer
+        # if number:
+        #     result_log["number"] = certificate.serial
+        # if countdown:
+        #     result_log["countdown"] = certificate.countdown
+
+        if arguments.subject:
+            result_log["subject"] = certificate.subject_org
+        if not arguments.expiry == False:
             result_log["expiry"] = certificate.expiry
-        if start:
+        if arguments.expiryreadable:
+            result_log["readable_expiry"] = certificate.readable_expiry
+        if arguments.start:
             result_log["start"] = certificate.start
-        if issuer or issuer_cn:
+        if arguments.startreadable:
+            result_log["readable_start"] = certificate.readable_start
+        if arguments.issuer:
             result_log["issuer"] = certificate.issuer
-        if number:
+        if arguments.issuercn:
+            result_log["issuer_cn"] = certificate.issuercn
+
+        if arguments.number:
             result_log["number"] = certificate.serial
-        if countdown:
+        if arguments.countdown:
             result_log["countdown"] = certificate.countdown
 
     if error_message:
@@ -334,10 +383,7 @@ def main(address=None, port=None, readable=None, local=None, expiry=None, start=
         # result_log["error"] = ", ".join(error_message)  # get a single string of errors
         result_log["error"] = error_message  # get a single string of errors
 
-
     print(json.dumps(result_log))
-
-    # TODO implement argparse
 
 
 if __name__ == "__main__":
@@ -345,58 +391,31 @@ if __name__ == "__main__":
 
     parser.add_argument("address", help="The web address to be used")
     parser.add_argument("-p", "--port", help="Set the port to use - usually 443", default=443)
-    parser.add_argument("-e", "--expiry", help="include the ssl expiration date in the output", default=True)
-    parser.add_argument("-r", "--readable", help="use a readable date format for the ssl expiration date", nargs='?')
-    parser.add_argument("-l", "--local", help="use local (Europe/London) time for readable date format (not UTC)", nargs='?')
-    parser.add_argument("-s", "--start", action="store_true", help="include the ssl start date in the format")  # TODO action="store_true" ? default value?
-    parser.add_argument("-i", "--issuer", help="include the ssl issuer by their full name", nargs='?')  # TODO expand on included
-    parser.add_argument("-t", "--issuercn", help="include the ssl issuer. Only the issuer's Common Name will be displayed", nargs='?')
-    parser.add_argument("-n", "--number", help="include the ssl serial number in the output", nargs='?')
-    parser.add_argument("-c", "--countdown", help="include the remaining years/months/weeks/days until ssl expires", nargs='?')
-    parser.add_argument("-f", "--subject", help="include the ssl subject (organisation) in the output", nargs='?')
-    parser.add_argument("--timeout", help="set the timeout", nargs='?')
-    parser.add_argument("-a", "--allitems", help="include all ssl attributes", nargs='?')
+    parser.add_argument("-e", "--expiry", help="include the ssl expiration date as a timestamp", default=True)
+    parser.add_argument("-r", "--expiryreadable", help="include a readable date format ssl expiration date (UTC)",  action="store_const", const=True)
+    parser.add_argument("-l", "--local", help="use local time (Europe/London) for readable date formats (start and expiry)", action="store_const", const=True)
+    parser.add_argument("-s", "--start", help="include the ssl start date", action="store_const", const=True)
+    parser.add_argument("-d", "--startreadable", help="include the ssl start date in a readable format", action="store_const", const=True)
+    parser.add_argument("-i", "--issuer", help="include the ssl issuer and use their full name (Common Name, Organisation and Country)", action="store_const", const=True)
+    parser.add_argument("-t", "--issuercn", help="include the ssl issuer. Include only the issuer's Common Name", action="store_const", const=True)
+    parser.add_argument("-n", "--number", help="include the serial number of the ssl certificate", action="store_const", const=True)
+    parser.add_argument("-c", "--countdown", help="include the remaining years/months/weeks/days until ssl expiration", action="store_const", const=True)
+    parser.add_argument("-f", "--subject", help="include the ssl subject (Organisation)", action="store_const", const=True)
+    parser.add_argument("-o", "--timeout", help="set the timeout", default=5, type=int)
+    parser.add_argument("-a", "--allitems", help="include all ssl certificate attributes. local time is not included", action="store_const", const=True)
 
     args = parser.parse_args()
 
-    # main(args.client, browser=args.browser, screen_width=args.width, screen_height=args.height, directory=args.directory,
-    #      suppress_mail=args.suppress)
+    # return all ssl certificate attributes
+    if args.allitems:
+        args.expiry = True
+        args.expiryreadable = True
+        args.start = True
+        args.startreadable = True
+        args.issuer = True
+        args.issuercn = True
+        args.number = True
+        args.countdown = True
+        args.subject = True
 
-    main(address=args.address, port=args.port, expiry=args.expiry, readable=args.readable, local=args.local, start=args.start, issuer=args.issuer,
-         issuer_cn=args.issuercn, number=args.number, countdown=args.countdown, subject_name=args.subject, timeout=args.timeout,
-         allitems=args.allitems, arguments=args)
-
-
-    # for opt, arg in opts:
-    #     if opt == ("-p" or "--port"):
-    #         port = int(arg)  # set port from provided arguments
-    #     elif opt == ("-e" or "--expiry"):
-    #         expiry = True
-    #     elif opt == ("-r" or "--readable"):
-    #         readable = True
-    #     elif opt == ("-l" or "--local"):
-    #         local = True
-    #     elif opt == ("-s" or "--start"):
-    #         start = True
-    #     elif opt == ("-i" or "--issuer"):
-    #         issuer = True
-    #     elif opt == ("-t" or "--issuercn"):
-    #         issuer_cn = True
-    #     elif opt == ("-n" or "--number"):
-    #         number = True
-    #     elif opt == ("-c" or "--countdown"):
-    #         countdown = True
-    #     elif opt == ("-f" or "--for"):
-    #         subject_name = True
-    #     elif opt == "--timeout":
-    #         timeout = int(arg)
-    #     elif opt == "-a" or opt == "--all":
-    #         local = True
-    #         expiry = True
-    #         start = True
-    #         issuer_cn = True
-    #         number = True
-    #         countdown = True
-    #         subject_name = True
-    #
-    #
+    main(arguments=args)
