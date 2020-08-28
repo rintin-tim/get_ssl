@@ -144,7 +144,8 @@ class Certificate:
         date = python_date
 
         if self.arguments.local:
-            date = python_date.astimezone(pytz.timezone("Europe/London"))
+            # date = python_date.astimezone(pytz.timezone("Europe/London"))
+            date = python_date.astimezone(pytz.timezone(self.arguments.local))
 
         human_format = "%c"  # Locale’s appropriate date and time representation: Tue Aug 16 21:30:00 1988 (en_US);
         date = date.strftime(human_format)
@@ -299,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--port", help="Set the port to use - usually 443", default=443)
     parser.add_argument("-e", "--expiry", help="include the ssl expiration date as a timestamp", default=True)
     parser.add_argument("-r", "--expiryreadable", help="include a readable date format ssl expiration date (UTC)",  action="store_const", const=True)
-    parser.add_argument("-l", "--local", help="use local time (Europe/London) for readable date formats (start and expiry)", action="store_const", const=True)
+    parser.add_argument("-l", "--local", help="use a valid pytz timezone for readable date formats (start and expiry). Defaults to UTC when not included. Defaults to Europe/London when included", nargs='?', const="Europe/London")
     parser.add_argument("-s", "--start", help="include the ssl start date", action="store_const", const=True)
     parser.add_argument("-d", "--startreadable", help="include the ssl start date in a readable format", action="store_const", const=True)
     parser.add_argument("-i", "--issuer", help="include the full ssl issuer - Common Name, Organisation and Country", action="store_const", const=True)
@@ -311,6 +312,10 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--allitems", help="include all ssl certificate attributes. local time is not included", action="store_const", const=True)
 
     args = parser.parse_args()
+
+    if args.local not in pytz.all_timezones:
+        print("--local: {} is not a valid timezone (tz)".format(args.local))
+        exit(1)
 
     # return all ssl certificate attributes
     if args.allitems:
