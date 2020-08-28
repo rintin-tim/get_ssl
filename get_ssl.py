@@ -34,8 +34,6 @@ class Certificate:
     def get_expiry(self):
         """ returns expiration date as timestamp """
         py_timestamp = self.ssl_property_to_py("expiry").timestamp()
-        # formatted_date = self.format_date(py_date)
-        # return formatted_date
         return py_timestamp
 
     def get_timestamp(self, start_expiry):
@@ -90,13 +88,6 @@ class Certificate:
         formatted_issuer = self.format_issuer(issuer_tuple, common_name)
         return formatted_issuer
 
-    # def get_issuer(self):
-    #     """ returns formatted string """
-    #     issuer_tuple = self.ssl_property_to_py("issuer")
-    #     formatted_issuer = self.format_issuer(issuer_tuple)
-    #     return formatted_issuer
-
-    # @staticmethod
     def format_issuer(self, components, common_name=None):
         """ formats the decoded component tuple. Creates a single string with each tuple pair ', ' separated.
         Converts issuer codes to full names e.g 'C' to 'Country'. Inserts a character between each key and value
@@ -128,7 +119,6 @@ class Certificate:
 
     def get_serial(self):
         serial_number = self.ssl_property_to_py("serial")
-        # hex_number = format(serial_number, 'x')  # format serial as hexcode (optional)
         return serial_number
 
     @staticmethod
@@ -138,13 +128,11 @@ class Certificate:
         py_date = datetime.strptime(utc_date, "%Y%m%d%H%M%S%z")
         return py_date
 
-    # @staticmethod
     def format_date(self, python_date):
         """ make the python date readable. optionally change to local timezone."""
         date = python_date
 
         if self.arguments.local:
-            # date = python_date.astimezone(pytz.timezone("Europe/London"))
             date = python_date.astimezone(pytz.timezone(self.arguments.local))
 
         human_format = "%c"  # Locale’s appropriate date and time representation: Tue Aug 16 21:30:00 1988 (en_US);
@@ -303,7 +291,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--local", help="use a valid pytz timezone for readable date formats (start and expiry). Defaults to UTC when not included. Defaults to Europe/London when included", nargs='?', const="Europe/London")
     parser.add_argument("-s", "--start", help="include the ssl start date", action="store_const", const=True)
     parser.add_argument("-d", "--startreadable", help="include the ssl start date in a readable format", action="store_const", const=True)
-    parser.add_argument("-i", "--issuer", help="include the full ssl issuer - Common Name, Organisation and Country", action="store_const", const=True)
+    parser.add_argument("-i", "--issuer", help="include the full ssl issuer - Common Name, Location, State, Organisation and Country", action="store_const", const=True)
     parser.add_argument("-t", "--issuercn", help="include the ssl issuer by their Common Name", action="store_const", const=True)
     parser.add_argument("-n", "--number", help="include the serial number of the ssl certificate", action="store_const", const=True)
     parser.add_argument("-c", "--countdown", help="include the remaining years/months/weeks/days until ssl expiration", action="store_const", const=True)
