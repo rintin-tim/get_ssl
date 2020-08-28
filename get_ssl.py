@@ -1,11 +1,9 @@
 #! /Library/Frameworks/Python.framework/Versions/3.6/bin/python3.6
 
-import sys
 import ssl
 from OpenSSL import crypto
 from datetime import datetime, timezone
 import pytz
-import getopt
 import socket
 from dateutil import relativedelta
 import re
@@ -210,8 +208,6 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
 
     The function will try a maximum of three times. """
 
-    # error_count = error_count
-
     if error_count < 3:
         if sslv23:
             context = ssl.SSLContext(
@@ -250,79 +246,8 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
         return None
 
 
-# def main(address=None, port=None, readable=None, local=None, expiry=None, start=None, issuer=None, issuer_cn=None, number=None,
-#          countdown=None, subject_name=None, timeout=None, allitems=None, arguments=None):
 def main(arguments=None):
     print(arguments)
-    # address = sys.argv[1]  # first parameter after script name
-    # options = sys.argv[2:]  # optional arguments passed into the script (all args after the address parameter)
-
-# """ port = 443
-#     readable = False
-#     local = False
-#     expiry = True
-#     start = False
-#     issuer = False
-#     issuer_cn = False
-#     number = False
-#     countdown = False
-#     subject_name = False
-#     timeout = 5
-# """
-
-    # error_message = []
-
-    # TODO correct or remove the OR in the below - both clauses need to as per "--all"
-
-    # opts, unknown = getopt.getopt(options, "p:ferlsitnco:a", ["for", "port=", "expiry", "ts_to_readable", "local", "start", "issuer", "issuercn", "number", "countdown", "countdownshort", "timeout=", "all"])  # looks for -p or --port in provided arguments
-    #
-    # for opt, arg in opts:
-    #     if opt == ("-p" or "--port"):
-    #         port = int(arg)  # set port from provided arguments
-    #     elif opt == ("-e" or "--expiry"):
-    #         expiry = True
-    #     elif opt == ("-r" or "--ts_to_readable"):
-    #         readable = True
-    #     elif opt == ("-l" or "--local"):
-    #         local = True
-    #     elif opt == ("-s" or "--start"):
-    #         start = True
-    #     elif opt == ("-i" or "--issuer"):
-    #         issuer = True
-    #     elif opt == ("-t" or "--issuercn"):
-    #         issuer_cn = True
-    #     elif opt == ("-n" or "--number"):
-    #         number = True
-    #     elif opt == ("-c" or "--countdown"):
-    #         countdown = True
-    #     elif opt == ("-f" or "--for"):
-    #         subject_name = True
-    #     elif opt == "--timeout":
-    #         timeout = int(arg)
-    #     elif opt == "-a" or opt == "--all":
-    #         local = True
-    #         expiry = True
-    #         start = True
-    #         issuer_cn = True
-    #         number = True
-    #         countdown = True
-    #         subject_name = True
-    #
-    # # TODO move this up/down?
-    #
-    # if unknown:
-    #     unknown_error = "Unknown arguments provided: {0}".format(unknown)
-    #     error_message.append(unknown_error)
-    #     # exit(1)  # TODO return exit code at bottom if messages are present
-
-    if arguments.allitems:
-        local = True
-        expiry = True
-        start = True
-        issuer_cn = True
-        number = True
-        countdown = True
-        subject_name = True
 
     hostname = clean_url(arguments.address)
 
@@ -334,29 +259,11 @@ def main(arguments=None):
         connection_error = "Could not retrieve certificate for host: {0} on port: {1}.".format(hostname, arguments.port)
         error_message.append(connection_error)
 
-
     # create result log
     result_log = {}
 
     if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         certificate = Certificate(pem_cert, arguments)
-
-        # organisation = certificate.get_organisation_subject()
-
-        # todo correct these
-
-        # if subject_name:
-        #     result_log["name"] = certificate.subject_org
-        # if expiry:
-        #     result_log["expiry"] = certificate.expiry
-        # if start:
-        #     result_log["start"] = certificate.start
-        # if issuer or issuer_cn:
-        #     result_log["issuer"] = certificate.issuer
-        # if number:
-        #     result_log["number"] = certificate.serial
-        # if countdown:
-        #     result_log["countdown"] = certificate.countdown
 
         if arguments.subject:
             result_log["subject"] = certificate.subject_org
@@ -380,7 +287,6 @@ def main(arguments=None):
 
     if error_message:
         error_message.reverse()  # print the last error first
-        # result_log["error"] = ", ".join(error_message)  # get a single string of errors
         result_log["error"] = error_message  # get a single string of errors
 
     print(json.dumps(result_log))
@@ -396,8 +302,8 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--local", help="use local time (Europe/London) for readable date formats (start and expiry)", action="store_const", const=True)
     parser.add_argument("-s", "--start", help="include the ssl start date", action="store_const", const=True)
     parser.add_argument("-d", "--startreadable", help="include the ssl start date in a readable format", action="store_const", const=True)
-    parser.add_argument("-i", "--issuer", help="include the ssl issuer and use their full name (Common Name, Organisation and Country)", action="store_const", const=True)
-    parser.add_argument("-t", "--issuercn", help="include the ssl issuer. Include only the issuer's Common Name", action="store_const", const=True)
+    parser.add_argument("-i", "--issuer", help="include the full ssl issuer - Common Name, Organisation and Country", action="store_const", const=True)
+    parser.add_argument("-t", "--issuercn", help="include the ssl issuer by their Common Name", action="store_const", const=True)
     parser.add_argument("-n", "--number", help="include the serial number of the ssl certificate", action="store_const", const=True)
     parser.add_argument("-c", "--countdown", help="include the remaining years/months/weeks/days until ssl expiration", action="store_const", const=True)
     parser.add_argument("-f", "--subject", help="include the ssl subject (Organisation)", action="store_const", const=True)
