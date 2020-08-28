@@ -189,20 +189,18 @@ def clean_url(address):
     return clean_hostname
 
 
-def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
+def get_pem_cert(_hostname, _port, _timeout, protocol_tls=False, error_count=0):
     """ retrieves SSL certificate. if an invalid certificate error is encountered
-     1. the message is logged.
-     2. the function will try again with sslv23=True (depending on reason for failure) to try and retrieve the data anyway.
-     (sslv23 is needed to return ssl information on invalid certificates)
+     1. the error message is logged.
+     2. the function will try again with protocol_tls=True (depending on reason for failure) to retrieve the ssl data anyway.
 
     The function will try a maximum of three times. """
 
     if error_count < 3:
-        if sslv23:
-            context = ssl.SSLContext(
-                ssl.PROTOCOL_SSLv23)  # SSLv23 deprecated in Python 3.6 but works see above. This version is used to return expired SSLs
+        if protocol_tls:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS)  # used to return the ssl information from an expired ssl certificate
         else:
-            context = ssl.create_default_context()  # Python Mac OS issue. Install Certificates.command from Applications/Python 3.6 folder or use SSLv23. https://stackoverflow.com/questions/41691327/ssl-sslerror-ssl-certificate-verify-failed-certificate-verify-failed-ssl-c  #TODO add this to the readme?
+            context = ssl.create_default_context()  # Python Mac OS issue. Install Certificates.command from Applications/Python 3.6 folder https://stackoverflow.com/questions/41691327/ssl-sslerror-ssl-certificate-verify-failed-certificate-verify-failed-ssl-c  #TODO add this to the readme?
         try:
             with socket.create_connection((_hostname, _port), timeout=_timeout) as sock:  # create a socket (port and url)
                 with context.wrap_socket(sock, server_hostname=_hostname) as ssock:  # add a context to the socket (handshake information)
@@ -213,18 +211,16 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
             error_message.append(timeout_error)
             return None
         except ssl.CertificateError as cert_err:
-            print("cert_err")
             error_count += 1
             certificate_error = "CertificateError: {0}. ".format(cert_err)
             error_message.append(certificate_error)
-            _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
+            _pem_cert = get_pem_cert(_hostname, _port, _timeout, protocol_tls=True, error_count=error_count)
             return _pem_cert
         except ssl.SSLError as ssl_err:
-            print("ssl error")
             error_count += 1
             ssl_error = "SSLError: {0}. ".format(ssl_err)
             error_message.append(ssl_error)
-            _pem_cert = get_pem_cert(_hostname, _port, _timeout, sslv23=True, error_count=error_count)
+            _pem_cert = get_pem_cert(_hostname, _port, _timeout, protocol_tls=True, error_count=error_count)
             return _pem_cert
         except:
             connection_error = "Unable to connect to {0}. ".format(_hostname)
@@ -236,12 +232,9 @@ def get_pem_cert(_hostname, _port, _timeout, sslv23=False, error_count=0):
 
 
 def main(arguments=None):
-    print(arguments)
-
     hostname = clean_url(arguments.address)
 
     # get PEM certificate
-    print(arguments.port)
     pem_cert = get_pem_cert(hostname, arguments.port, arguments.timeout)
 
     if not pem_cert:
@@ -301,7 +294,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.local not in pytz.all_timezones:
+    if args.local and args.local not in pytz.all_timezones:
         print("--local: {} is not a valid timezone (pytz)".format(args.local))
         exit(1)
 
