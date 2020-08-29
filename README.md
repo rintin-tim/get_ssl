@@ -58,7 +58,8 @@ That's a bit boring. So there are a number of options to enhance your SSL retrie
 
 **`-a, --allitems`**: Include all SSL certificate attributes. UTC timezone is used unless '--local' is also specified  
 *Example*: `python3 get_ssl.py example.com -a`  
-*Output*: `{"domain": "example.com", "subject": "Internet Corporation for Assigned Names and Numbers", "expiry": 1606910400.0, "readable_expiry": "Wed Dec  2 12:00:00 2020", "start": 1543363200.0, "readable_start": "Wed Nov 28 00:00:00 2018", "issuer": "Common Name: DigiCert SHA2 Secure Server CA, Organisation: DigiCert Inc, Country: US", "issuer_cn": "DigiCert SHA2 Secure Server CA", "number": 21020869104500376438182461249190639870, "countdown": "3 months, 0 weeks, 2 days"}`  
+*Output*:  
+ ```{"domain": "example.com", "subject": "Internet Corporation for Assigned Names and Numbers", "expiry": 1606910400.0, "readable_expiry": "Wed Dec  2 12:00:00 2020", "start": 1543363200.0, "readable_start": "Wed Nov 28 00:00:00 2018", "issuer": "Common Name: DigiCert SHA2 Secure Server CA, Organisation: DigiCert Inc, Country: US", "issuer_cn": "DigiCert SHA2 Secure Server CA", "number": 21020869104500376438182461249190639870, "countdown": "3 months, 0 weeks, 2 days"}```  
 
 ## License
 This script is made available with the permissions set out under **GNU General Public License v3.0**
