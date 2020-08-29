@@ -1,4 +1,4 @@
-"""NOT FOR NOW: #! /Library/Frameworks/Python.framework/Versions/3.6/bin/python3.6"""
+#! /usr/bin/env python3
 
 import ssl
 from OpenSSL import crypto
@@ -11,7 +11,7 @@ import json
 import argparse
 
 
-error_message = []  # global placeholder
+error_message = []  # placeholder
 
 
 class Certificate:
@@ -242,7 +242,7 @@ def main(arguments=None):
         error_message.append(connection_error)
 
     # create result log
-    result_log = {}
+    result_log = dict(domain=hostname)  # initiate result_log dictionary with "domain" key
 
     if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         certificate = Certificate(pem_cert, arguments)
@@ -261,7 +261,6 @@ def main(arguments=None):
             result_log["issuer"] = certificate.issuer
         if arguments.issuercn:
             result_log["issuer_cn"] = certificate.issuercn
-
         if arguments.number:
             result_log["number"] = certificate.serial
         if arguments.countdown:
@@ -277,20 +276,20 @@ def main(arguments=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("address", help="enter the web address/domain to be used")
-    parser.add_argument("-p", "--port", help="the port to be used", default=443)
-    parser.add_argument("-e", "--expiry", help="output will include the ssl expiration date as a timestamp", default=True)
-    parser.add_argument("-r", "--expiryreadable", help="output will include a readable date format ssl expiration date (UTC)",  action="store_const", const=True)
-    parser.add_argument("-l", "--local", help="enter a valid pytz timezone for readable date formats (start and expiry). Defaults to UTC when not included. Defaults to Europe/London when included", nargs='?', const="Europe/London")
-    parser.add_argument("-s", "--start", help="output will include the ssl start date", action="store_const", const=True)
-    parser.add_argument("-d", "--startreadable", help="output will include the ssl start date in a readable format", action="store_const", const=True)
-    parser.add_argument("-i", "--issuer", help="output will include the full ssl issuer - Common Name, Location, State, Organisation and Country", action="store_const", const=True)
-    parser.add_argument("-t", "--issuercn", help="output will include the ssl issuer by their Common Name", action="store_const", const=True)
-    parser.add_argument("-n", "--number", help="output will include the serial number of the ssl certificate", action="store_const", const=True)
-    parser.add_argument("-c", "--countdown", help="output will include the remaining years/months/weeks/days until ssl expiration", action="store_const", const=True)
-    parser.add_argument("-f", "--subject", help="output will include the ssl subject (Organisation)", action="store_const", const=True)
-    parser.add_argument("-o", "--timeout", help="enter the connection timeout in seconds", default=5, type=int)
-    parser.add_argument("-a", "--allitems", help="output will include all ssl certificate attributes (uses UTC timezone unless --local is also specified)", action="store_const", const=True)
+    parser.add_argument("address", help="Enter the web address or domain to check for the SSL certificate")
+    parser.add_argument("-p", "--port", help="Specify the port used to look for the SSL certificate. This defaults to 443", default=443)
+    parser.add_argument("-e", "--expiry", help="Include the SSL expiration date as a timestamp. This will be included in the output by default.", default=True)
+    parser.add_argument("-r", "--expiryreadable", help="Include the SSL expiration date in a readable date format (UTC)", action="store_const", const=True)
+    parser.add_argument("-l", "--local", help="Specify a valid pytz timezone for readable date formats (start and expiry). UTC is used when not specified. Defaults to Europe/London if the parameter is supplied without a value", nargs='?', const="Europe/London")
+    parser.add_argument("-s", "--start", help="Include the SSL start date", action="store_const", const=True)
+    parser.add_argument("-d", "--startreadable", help="Include the SSL start date in a readable format", action="store_const", const=True)
+    parser.add_argument("-i", "--issuer", help="Include the full SSL issuer - Common Name, Location, State, Organisation and Country", action="store_const", const=True)
+    parser.add_argument("-t", "--issuercn", help="Include the SSL issuer by their Common Name", action="store_const", const=True)
+    parser.add_argument("-n", "--number", help="Include the serial number of the SSL certificate", action="store_const", const=True)
+    parser.add_argument("-c", "--countdown", help="Include the remaining years/months/weeks/days until SSL expiration", action="store_const", const=True)
+    parser.add_argument("-f", "--subject", help="Include the SSL subject (Organisation)", action="store_const", const=True)
+    parser.add_argument("-o", "--timeout", help="Specify the connection timeout in seconds", default=5, type=int)
+    parser.add_argument("-a", "--allitems", help="Include all SSL certificate attributes. UTC timezone is used unless '--local' is also specified", action="store_const", const=True)
 
     args = parser.parse_args()
 
@@ -311,3 +310,5 @@ if __name__ == "__main__":
         args.subject = True
 
     main(arguments=args)
+
+# TODO add readme
