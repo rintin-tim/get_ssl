@@ -244,7 +244,7 @@ def main(arguments=None):
         error_message.append(connection_error)
 
     # create result log
-    result_log = dict(domain=hostname)  # initiate result_log dictionary with "domain" key
+    result_log = dict(domain=hostname)  # create 'result_log' dictionary. include 'domain' key
 
     if pem_cert and ("BEGIN CERTIFICATE" in pem_cert):
         certificate = Certificate(pem_cert, arguments)
@@ -276,6 +276,7 @@ def main(arguments=None):
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("address", help="Enter the web address or domain to check for the SSL certificate")
