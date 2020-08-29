@@ -90,10 +90,11 @@ class Certificate:
 
     @staticmethod
     def format_issuer(components, common_name=None):
-        """ formats the decoded component tuple. Creates a single string with each tuple pair ', ' separated.
-        Converts issuer codes to full names e.g 'C' to 'Country'. Inserts a character between each key and value
-        such as '=' or ':' to aid string readability. Has the option to return a dictionary rather than a
-        string to help with API integration. """
+        """ Formats the decoded component tuple. Creates a single string with each tuple pair ', ' separated.
+        Converts issuer codes to full names e.g 'C' to 'Country'. Inserts a character between each key, value pair to
+        aid readability.
+        NOTE: This function can be updated to return a dictionary ('issuer_dict') rather than a string '(issuer_string)'
+        to help with API integration."""
 
         issuer_property = {
             "C": "Country",
@@ -190,11 +191,12 @@ def clean_url(address):
 
 
 def get_pem_cert(_hostname, _port, _timeout, protocol_tls=False, error_count=0):
-    """ retrieves SSL certificate. if an invalid certificate error is encountered
+    """ retrieves SSL certificate. if an invalid certificate error is encountered...
      1. the error message is logged.
-     2. the function will try again with protocol_tls=True (depending on reason for failure) to retrieve the ssl data anyway.
+     2. the function will not retrieve further ssl data on this attempt
+     3. the function will try again with 'protocol_tls=True' to ignore the error and retrieve any SSL data regardless
 
-    The function will try a maximum of three times. """
+    A maximum of three attempts will be made"""
 
     if error_count < 3:
         if protocol_tls:
@@ -310,5 +312,3 @@ if __name__ == "__main__":
         args.subject = True
 
     main(arguments=args)
-
-# TODO add readme
